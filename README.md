@@ -1,16 +1,67 @@
-# robot_control_app
+# Line-Tracking Robot Remote Controller App
 
-A new Flutter project.
+A Flutter mobile app to remotely control a line-tracking robot, monitor
+telemetry, and switch modes in real time.
+
+## Features
+- Manual control with on-screen joystick
+- Line sensor and telemetry display
+- Mode toggle (manual/auto)
+- Status indicators and connection info
+- Cross-platform Flutter UI
+
+## Screens
+- Control screen
+- Telemetry panel
+- Line sensor widget
+- Status bar
+
+## Tech Stack
+- Flutter / Dart
+- Material UI
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+### Prerequisites
+- Flutter SDK
+- Android Studio or VS Code with Flutter extension
+- Android/iOS emulator or a physical device
 
-A few resources to get you started if this is your first Flutter project:
+### Install
+```bash
+flutter pub get
+```
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+### Run (Android)
+```bash
+flutter run
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### Build (Android APK)
+```bash
+flutter build apk --release
+```
+
+## Project Structure
+```
+lib/
+  app.dart
+  main.dart
+  controllers/
+  models/
+  screens/
+  widgets/
+```
+
+## Configuration
+If your robot uses a specific IP or Bluetooth ID, update it in your
+connection logic (e.g. `lib/controllers/control_state.dart`).
+
+## Roadmap
+- [ ] Add pairing screen for Bluetooth/Wi-Fi
+- [ ] Save last-used robot address
+- [ ] Telemetry logging
+- [ ] PID tuning controls
+
+## License
+Add a license or remove this section.
