@@ -5,10 +5,12 @@ class StatusBar extends StatefulWidget {
     super.key,
     required this.accentColor,
     required this.isConnected,
+    required this.isConnecting,
   });
 
   final Color accentColor;
   final bool isConnected;
+  final bool isConnecting;
 
   @override
   State<StatusBar> createState() => _StatusBarState();
@@ -52,9 +54,21 @@ class _StatusBarState extends State<StatusBar>
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final statusText = widget.isConnected ? 'CONNECTED' : 'DISCONNECTED';
-    final statusColor =
-        widget.isConnected ? widget.accentColor : const Color(0xFFFF4D4D);
+    final statusText = widget.isConnected
+        ? 'CONNECTED'
+        : widget.isConnecting
+            ? 'CONNECTING...'
+            : 'DISCONNECTED';
+    final statusColor = widget.isConnected
+        ? widget.accentColor
+        : widget.isConnecting
+            ? const Color(0xFFFFC107)
+            : const Color(0xFFFF4D4D);
+    final statusIcon = widget.isConnected
+        ? Icons.bluetooth
+        : widget.isConnecting
+            ? Icons.bluetooth_searching
+            : Icons.bluetooth_disabled;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
@@ -68,7 +82,7 @@ class _StatusBarState extends State<StatusBar>
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'MECHATRONICS CONTROL',
+              'MECHATRONICS REMOTE CONTROL by May Myint Mo',
               style: textTheme.titleLarge,
               overflow: TextOverflow.ellipsis,
             ),
@@ -78,7 +92,7 @@ class _StatusBarState extends State<StatusBar>
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                Icons.bluetooth_disabled,
+                statusIcon,
                 color: statusColor,
                 size: 18,
               ),

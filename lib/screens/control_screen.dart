@@ -90,6 +90,15 @@ class _ControlScreenState extends State<ControlScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
+                            _ConnectButton(
+                              isConnected: _controlState.telemetryData.isConnected,
+                              isConnecting: _controlState.isConnecting,
+                              onPressed: () {
+                                HapticFeedback.mediumImpact();
+                                _controlState.connectToDevice();
+                              },
+                            ),
+                            const SizedBox(height: 12),
                             ModeToggle(
                               isAutonomous: _controlState.isAutonomous,
                               onModeChanged: _controlState.setMode,
@@ -115,6 +124,7 @@ class _ControlScreenState extends State<ControlScreen> {
                   child: StatusBar(
                     accentColor: accentColor,
                     isConnected: _controlState.telemetryData.isConnected,
+                    isConnecting: _controlState.isConnecting,
                   ),
                 ),
               ],
@@ -156,6 +166,55 @@ class _EmergencyStopButton extends StatelessWidget {
             color: Colors.white,
             letterSpacing: 1.2,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ConnectButton extends StatelessWidget {
+  const _ConnectButton({
+    required this.isConnected,
+    required this.isConnecting,
+    required this.onPressed,
+  });
+
+  final bool isConnected;
+  final bool isConnecting;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final label = isConnected
+        ? 'CONNECTED'
+        : isConnecting
+            ? 'CONNECTING...'
+            : 'CONNECT';
+    final color = isConnected
+        ? const Color(0xFF00C853)
+        : isConnecting
+            ? const Color(0xFFFFC107)
+            : const Color(0xFF00B0FF);
+    return InkWell(
+      onTap: (isConnected || isConnecting) ? null : onPressed,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.18),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: color, width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.35),
+              blurRadius: 14,
+            ),
+          ],
+        ),
+        child: Text(
+          label,
+          style: textTheme.titleLarge?.copyWith(color: color),
         ),
       ),
     );
