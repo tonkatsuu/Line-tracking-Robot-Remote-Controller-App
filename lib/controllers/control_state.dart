@@ -10,7 +10,7 @@ import '../models/telemetry_data.dart';
 
 class ControlState extends ChangeNotifier {
   ControlState() {
-    connectToDevice();
+    // Connection is triggered manually via the UI.
   }
 
   static const String _deviceName = 'Robot-Control-R4';
@@ -119,6 +119,12 @@ class ControlState extends ChangeNotifier {
     if (_device == null && isConnecting) {
       _setDisconnected();
     }
+  }
+
+  Future<void> disconnectFromDevice() async {
+    if (!telemetryData.isConnected && !isConnecting) return;
+    await _cleanupBle();
+    _setDisconnected();
   }
 
   Future<void> _connectToDevice(BluetoothDevice device) async {

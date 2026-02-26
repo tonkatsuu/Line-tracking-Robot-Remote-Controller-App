@@ -93,9 +93,13 @@ class _ControlScreenState extends State<ControlScreen> {
                             _ConnectButton(
                               isConnected: _controlState.telemetryData.isConnected,
                               isConnecting: _controlState.isConnecting,
-                              onPressed: () {
+                              onConnect: () {
                                 HapticFeedback.mediumImpact();
                                 _controlState.connectToDevice();
+                              },
+                              onDisconnect: () {
+                                HapticFeedback.mediumImpact();
+                                _controlState.disconnectFromDevice();
                               },
                             ),
                             const SizedBox(height: 12),
@@ -176,28 +180,30 @@ class _ConnectButton extends StatelessWidget {
   const _ConnectButton({
     required this.isConnected,
     required this.isConnecting,
-    required this.onPressed,
+    required this.onConnect,
+    required this.onDisconnect,
   });
 
   final bool isConnected;
   final bool isConnecting;
-  final VoidCallback onPressed;
+  final VoidCallback onConnect;
+  final VoidCallback onDisconnect;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final label = isConnected
-        ? 'CONNECTED'
+        ? 'DISCONNECT'
         : isConnecting
             ? 'CONNECTING...'
             : 'CONNECT';
     final color = isConnected
-        ? const Color(0xFF00C853)
+        ? const Color(0xFFFF5252)
         : isConnecting
             ? const Color(0xFFFFC107)
             : const Color(0xFF00B0FF);
     return InkWell(
-      onTap: (isConnected || isConnecting) ? null : onPressed,
+      onTap: isConnecting ? null : (isConnected ? onDisconnect : onConnect),
       borderRadius: BorderRadius.circular(18),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),

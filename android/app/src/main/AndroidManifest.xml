@@ -6,7 +6,7 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <application
-        android:label="robot_control_app"
+        android:label="Robot Remote Controller by May"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
