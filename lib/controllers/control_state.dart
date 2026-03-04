@@ -137,6 +137,9 @@ class ControlState extends ChangeNotifier {
       }
     }
 
+    // Ensure the connection is fully established before discovery.
+    await _waitForConnected(device);
+
     _connectionSubscription?.cancel();
     _connectionSubscription = device.connectionState.listen((state) {
       if (state == BluetoothConnectionState.disconnected) {
@@ -144,7 +147,9 @@ class ControlState extends ChangeNotifier {
       }
     });
 
-    final services = await device.discoverServices();
+    // Give the peripheral a moment to finish setting up GATT, then retry.
+    await Future.delayed(const Duration(milliseconds: 250));
+    final services = await _discoverServicesWithRetry(device);
     for (final service in services) {
       if (service.uuid != _serviceUuid) continue;
       for (final characteristic in service.characteristics) {
@@ -230,6 +235,33 @@ class ControlState extends ChangeNotifier {
 
   int _toSignedInt8(int value) {
     return value > 127 ? value - 256 : value;
+  }
+
+  Future<void> _waitForConnected(BluetoothDevice device) async {
+    try {
+      await device.connectionState
+          .firstWhere(
+            (state) => state == BluetoothConnectionState.connected,
+          )
+          .timeout(const Duration(seconds: 5));
+    } catch (_) {
+      // Best-effort: proceed even if the stream didn't emit in time.
+    }
+  }
+
+  Future<List<BluetoothService>> _discoverServicesWithRetry(
+    BluetoothDevice device,
+  ) async {
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        final services = await device.discoverServices();
+        if (services.isNotEmpty) return services;
+      } catch (error) {
+        debugPrint('BLE discover services error: $error');
+      }
+      await Future.delayed(const Duration(milliseconds: 250));
+    }
+    return device.discoverServices();
   }
 
   TelemetryData _copyTelemetry({
