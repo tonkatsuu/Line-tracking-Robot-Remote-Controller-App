@@ -115,6 +115,7 @@ class ControlState extends ChangeNotifier {
 
     await FlutterBluePlus.startScan(
       timeout: const Duration(seconds: 8),
+      withServices: [_serviceUuid],
     );
     if (_device == null && isConnecting) {
       _setDisconnected();
@@ -129,7 +130,10 @@ class ControlState extends ChangeNotifier {
 
   Future<void> _connectToDevice(BluetoothDevice device) async {
     try {
-      await device.connect(timeout: const Duration(seconds: 10));
+      await device.connect(
+        timeout: const Duration(seconds: 10),
+        autoConnect: false,
+      );
     } catch (error) {
       // Ignore if already connected; otherwise treat as failure.
       if (!error.toString().contains('already connected')) {
@@ -139,6 +143,10 @@ class ControlState extends ChangeNotifier {
 
     // Ensure the connection is fully established before discovery.
     await _waitForConnected(device);
+    if (!await _isConnected(device)) {
+      _setDisconnected();
+      return;
+    }
 
     _connectionSubscription?.cancel();
     _connectionSubscription = device.connectionState.listen((state) {
@@ -149,7 +157,12 @@ class ControlState extends ChangeNotifier {
 
     // Give the peripheral a moment to finish setting up GATT, then retry.
     await Future.delayed(const Duration(milliseconds: 250));
-    final services = await _discoverServicesWithRetry(device);
+    if (Platform.isAndroid) {
+      try {
+        await device.requestMtu(64);
+      } catch (_) {}
+    }
+    var services = await _discoverServicesWithRetry(device);
     for (final service in services) {
       if (service.uuid != _serviceUuid) continue;
       for (final characteristic in service.characteristics) {
@@ -163,9 +176,34 @@ class ControlState extends ChangeNotifier {
 
     if (_writeCharacteristic == null || _notifyCharacteristic == null) {
       debugPrint('BLE characteristics not found.');
-      await device.disconnect();
-      _setDisconnected();
-      return;
+      // Retry once after a short reconnect (Android GATT flakiness).
+      try {
+        await device.disconnect();
+      } catch (_) {}
+      await Future.delayed(const Duration(milliseconds: 400));
+      try {
+        await device.connect(
+          timeout: const Duration(seconds: 10),
+          autoConnect: false,
+        );
+      } catch (_) {}
+      await _waitForConnected(device);
+      services = await _discoverServicesWithRetry(device);
+      for (final service in services) {
+        if (service.uuid != _serviceUuid) continue;
+        for (final characteristic in service.characteristics) {
+          if (characteristic.uuid == _writeCharacteristicUuid) {
+            _writeCharacteristic = characteristic;
+          } else if (characteristic.uuid == _notifyCharacteristicUuid) {
+            _notifyCharacteristic = characteristic;
+          }
+        }
+      }
+      if (_writeCharacteristic == null || _notifyCharacteristic == null) {
+        await device.disconnect();
+        _setDisconnected();
+        return;
+      }
     }
 
     await _notifyCharacteristic!.setNotifyValue(true);
@@ -235,6 +273,15 @@ class ControlState extends ChangeNotifier {
 
   int _toSignedInt8(int value) {
     return value > 127 ? value - 256 : value;
+  }
+
+  Future<bool> _isConnected(BluetoothDevice device) async {
+    try {
+      final state = await device.connectionState.first;
+      return state == BluetoothConnectionState.connected;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> _waitForConnected(BluetoothDevice device) async {
