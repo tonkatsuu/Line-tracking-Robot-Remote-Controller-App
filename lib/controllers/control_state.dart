@@ -227,8 +227,19 @@ class ControlState extends ChangeNotifier {
     if (now - _lastSentMillis < 50) return;
     _lastSentMillis = now;
 
-    final scaledX = (x.clamp(-1.0, 1.0) * 127).round();
-    final scaledY = (y.clamp(-1.0, 1.0) * 127).round();
+    // Add a response curve so small joystick moves are gentler.
+    const double expo = 0.55;
+    const double maxScale = 0.85;
+
+    double applyCurve(double value) {
+      final clamped = value.clamp(-1.0, 1.0);
+      final curved = clamped * (1 - expo) + clamped * clamped * clamped * expo;
+      return (curved * maxScale).clamp(-1.0, 1.0);
+    }
+
+    // Invert X to align joystick direction with robot turning.
+    final scaledX = (applyCurve(-x) * 127).round();
+    final scaledY = (applyCurve(y) * 127).round();
     final payload = Uint8List.fromList([
       scaledX & 0xFF,
       scaledY & 0xFF,
