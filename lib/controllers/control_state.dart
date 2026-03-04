@@ -36,6 +36,7 @@ class ControlState extends ChangeNotifier {
   );
 
   Timer? _flashTimer;
+  Timer? _keepAliveTimer;
   int _lastSentMillis = 0;
   bool emergencyFlash = false;
 
@@ -90,36 +91,43 @@ class ControlState extends ChangeNotifier {
       return;
     }
 
+    final foundDevice = Completer<BluetoothDevice?>();
     _scanSubscription = FlutterBluePlus.scanResults.listen(
       (results) async {
-        if (_device != null) return;
+        if (_device != null || foundDevice.isCompleted) return;
         for (final result in results) {
           final advName = result.advertisementData.advName;
           final deviceName =
               advName.isNotEmpty ? advName : result.device.platformName;
-          if (deviceName == _deviceName) {
+          if (_matchesTargetDevice(deviceName)) {
             _device = result.device;
-            await FlutterBluePlus.stopScan();
-            await _scanSubscription?.cancel();
-            _scanSubscription = null;
-            await _connectToDevice(result.device);
+            foundDevice.complete(result.device);
             break;
           }
         }
       },
       onError: (error) {
         debugPrint('BLE scan error: $error');
+        if (!foundDevice.isCompleted) foundDevice.complete(null);
         _setDisconnected();
       },
     );
 
-    await FlutterBluePlus.startScan(
-      timeout: const Duration(seconds: 8),
-      withServices: [_serviceUuid],
+    await FlutterBluePlus.startScan(timeout: const Duration(seconds: 8));
+    final device = await foundDevice.future.timeout(
+      const Duration(seconds: 8),
+      onTimeout: () => null,
     );
-    if (_device == null && isConnecting) {
+    await FlutterBluePlus.stopScan();
+    await _scanSubscription?.cancel();
+    _scanSubscription = null;
+
+    if (device == null && isConnecting) {
       _setDisconnected();
+      return;
     }
+
+    await _connectToDevice(device);
   }
 
   Future<void> disconnectFromDevice() async {
@@ -129,6 +137,7 @@ class ControlState extends ChangeNotifier {
   }
 
   Future<void> _connectToDevice(BluetoothDevice device) async {
+    var canProceed = true;
     try {
       await device.connect(
         timeout: const Duration(seconds: 10),
@@ -138,7 +147,12 @@ class ControlState extends ChangeNotifier {
       // Ignore if already connected; otherwise treat as failure.
       if (!error.toString().contains('already connected')) {
         debugPrint('BLE connect error: $error');
+        canProceed = false;
       }
+    }
+    if (!canProceed) {
+      _setDisconnected();
+      return;
     }
 
     // Ensure the connection is fully established before discovery.
@@ -212,6 +226,8 @@ class ControlState extends ChangeNotifier {
       _handleTelemetry,
       onError: (error) => debugPrint('Notify error: $error'),
     );
+    _startKeepAlive();
+    await sendCommand(joystickX, joystickY);
 
     isConnecting = false;
     telemetryData = _copyTelemetry(
@@ -344,6 +360,10 @@ class ControlState extends ChangeNotifier {
   }
 
   Future<void> _cleanupBle() async {
+    _keepAliveTimer?.cancel();
+    _keepAliveTimer = null;
+    await _connectionSubscription?.cancel();
+    _connectionSubscription = null;
     await _notifySubscription?.cancel();
     _notifySubscription = null;
     await _scanSubscription?.cancel();
@@ -367,6 +387,21 @@ class ControlState extends ChangeNotifier {
     _device = null;
   }
 
+  void _startKeepAlive() {
+    _keepAliveTimer?.cancel();
+    _keepAliveTimer = Timer.periodic(
+      const Duration(milliseconds: 200),
+      (_) => sendCommand(joystickX, joystickY),
+    );
+  }
+
+  bool _matchesTargetDevice(String scannedName) {
+    final normalizedScanned = scannedName.trim().toLowerCase();
+    final normalizedTarget = _deviceName.trim().toLowerCase();
+    if (normalizedScanned == normalizedTarget) return true;
+    return normalizedScanned.contains(normalizedTarget);
+  }
+
   void _setDisconnected() {
     isConnecting = false;
     telemetryData = _copyTelemetry(isConnected: false);
@@ -388,6 +423,7 @@ class ControlState extends ChangeNotifier {
   @override
   void dispose() {
     _flashTimer?.cancel();
+    _keepAliveTimer?.cancel();
     _connectionSubscription?.cancel();
     _cleanupBle();
     super.dispose();
