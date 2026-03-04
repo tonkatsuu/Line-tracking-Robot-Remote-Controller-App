@@ -17,6 +17,7 @@ class ControlScreen extends StatefulWidget {
 
 class _ControlScreenState extends State<ControlScreen> {
   late final ControlState _controlState;
+  bool _showDebugPanel = false;
 
   @override
   void initState() {
@@ -115,6 +116,16 @@ class _ControlScreenState extends State<ControlScreen> {
                                 _controlState.triggerEmergencyStop();
                               },
                             ),
+                            const SizedBox(height: 12),
+                            _DebugToggleButton(
+                              enabled: _showDebugPanel,
+                              onPressed: () {
+                                HapticFeedback.selectionClick();
+                                setState(() {
+                                  _showDebugPanel = !_showDebugPanel;
+                                });
+                              },
+                            ),
                           ],
                         ),
                       ),
@@ -131,10 +142,113 @@ class _ControlScreenState extends State<ControlScreen> {
                     isConnecting: _controlState.isConnecting,
                   ),
                 ),
+                if (_showDebugPanel)
+                  Positioned(
+                    left: 12,
+                    right: 12,
+                    bottom: 12,
+                    child: _BleDebugPanel(controlState: _controlState),
+                  ),
               ],
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _BleDebugPanel extends StatelessWidget {
+  const _BleDebugPanel({required this.controlState});
+
+  final ControlState controlState;
+
+  @override
+  Widget build(BuildContext context) {
+    final logs = controlState.debugLogs;
+    final visibleLogs = logs.length > 8 ? logs.sublist(logs.length - 8) : logs;
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.45),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0x6600B0FF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'BLE Debug Log',
+                  style: TextStyle(
+                    color: Color(0xFF90CAF9),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: controlState.clearDebugLogs,
+                child: const Text('Clear'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          if (visibleLogs.isEmpty)
+            const Text(
+              'No logs yet. Tap CONNECT.',
+              style: TextStyle(color: Colors.white70, fontSize: 12),
+            )
+          else
+            ...visibleLogs.map(
+              (line) => Text(
+                line,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontFamily: 'monospace',
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DebugToggleButton extends StatelessWidget {
+  const _DebugToggleButton({
+    required this.enabled,
+    required this.onPressed,
+  });
+
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = enabled ? const Color(0xFF90CAF9) : const Color(0xFF607D8B);
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.18),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: color, width: 1.8),
+        ),
+        child: Text(
+          enabled ? 'HIDE DEBUG' : 'SHOW DEBUG',
+          style: TextStyle(
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }

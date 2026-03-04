@@ -19,6 +19,8 @@ class ControlState extends ChangeNotifier {
       Guid('19B10001-E8F2-537E-4F6C-D104768A1214');
   static final Guid _notifyCharacteristicUuid =
       Guid('19B10002-E8F2-537E-4F6C-D104768A1214');
+  static final Guid _modeCharacteristicUuid =
+      Guid('19B10003-E8F2-537E-4F6C-D104768A1214');
 
   double joystickX = 0;
   double joystickY = 0;
@@ -39,13 +41,16 @@ class ControlState extends ChangeNotifier {
   Timer? _keepAliveTimer;
   int _lastSentMillis = 0;
   bool emergencyFlash = false;
+  final List<String> _debugLogs = <String>[];
 
   BluetoothDevice? _device;
   BluetoothCharacteristic? _writeCharacteristic;
   BluetoothCharacteristic? _notifyCharacteristic;
+  BluetoothCharacteristic? _modeCharacteristic;
   StreamSubscription<List<ScanResult>>? _scanSubscription;
   StreamSubscription<List<int>>? _notifySubscription;
   StreamSubscription<BluetoothConnectionState>? _connectionSubscription;
+  List<String> get debugLogs => List.unmodifiable(_debugLogs);
 
   void updateJoystick(double x, double y) {
     if (x == joystickX && y == joystickY) return;
@@ -58,6 +63,7 @@ class ControlState extends ChangeNotifier {
   void setMode(bool autonomous) {
     if (autonomous == isAutonomous) return;
     isAutonomous = autonomous;
+    unawaited(_sendModeToRobot(autonomous));
     notifyListeners();
   }
 
@@ -74,24 +80,29 @@ class ControlState extends ChangeNotifier {
     }
     final denied = results.values.any((status) => !status.isGranted);
     if (denied) {
-      debugPrint('BLE permissions denied: $results');
+      _log('Permissions denied: $results');
     }
     return !denied;
   }
 
   Future<void> connectToDevice() async {
     if (isConnecting || telemetryData.isConnected) return;
+    _log('Connect requested');
     isConnecting = true;
     notifyListeners();
     await _cleanupBle();
 
     final hasPermissions = await requestBlePermissions();
     if (!hasPermissions) {
+      _log('Connect aborted: permissions missing');
       _setDisconnected();
       return;
     }
 
+    _log('Scanning for $_deviceName');
     final foundDevice = Completer<BluetoothDevice?>();
+    final seenDuringScan = <String>{};
+    final targetServiceUuid = _serviceUuid.toString().toLowerCase();
     _scanSubscription = FlutterBluePlus.scanResults.listen(
       (results) async {
         if (_device != null || foundDevice.isCompleted) return;
@@ -99,31 +110,51 @@ class ControlState extends ChangeNotifier {
           final advName = result.advertisementData.advName;
           final deviceName =
               advName.isNotEmpty ? advName : result.device.platformName;
-          if (_matchesTargetDevice(deviceName)) {
+          final advertisedServices = result.advertisementData.serviceUuids
+              .map((uuid) => uuid.toString().toLowerCase())
+              .toList();
+          final hasTargetService = advertisedServices.contains(targetServiceUuid);
+          final remoteId = result.device.remoteId.toString();
+
+          if (seenDuringScan.add(remoteId)) {
+            _log(
+              'Seen device: name="${deviceName.isEmpty ? '(empty)' : deviceName}" '
+              'id=$remoteId rssi=${result.rssi} services=${advertisedServices.length}',
+            );
+          }
+
+          if (_matchesTargetDevice(deviceName) || hasTargetService) {
             _device = result.device;
+            _log(
+              'Found target: name="${deviceName.isEmpty ? '(empty)' : deviceName}" '
+              'id=$remoteId by ${hasTargetService ? 'service' : 'name'}',
+            );
             foundDevice.complete(result.device);
             break;
           }
         }
       },
       onError: (error) {
-        debugPrint('BLE scan error: $error');
+        _log('Scan error: $error');
         if (!foundDevice.isCompleted) foundDevice.complete(null);
         _setDisconnected();
       },
     );
 
-    await FlutterBluePlus.startScan(timeout: const Duration(seconds: 8));
+    await FlutterBluePlus.startScan(timeout: const Duration(seconds: 12));
     final device = await foundDevice.future.timeout(
-      const Duration(seconds: 8),
+      const Duration(seconds: 12),
       onTimeout: () => null,
     );
     await FlutterBluePlus.stopScan();
     await _scanSubscription?.cancel();
     _scanSubscription = null;
 
-    if (device == null && isConnecting) {
-      _setDisconnected();
+    if (device == null) {
+      if (isConnecting) {
+        _log('Scan timeout: target device not found');
+        _setDisconnected();
+      }
       return;
     }
 
@@ -132,6 +163,7 @@ class ControlState extends ChangeNotifier {
 
   Future<void> disconnectFromDevice() async {
     if (!telemetryData.isConnected && !isConnecting) return;
+    _log('Manual disconnect requested');
     await _cleanupBle();
     _setDisconnected();
   }
@@ -139,6 +171,7 @@ class ControlState extends ChangeNotifier {
   Future<void> _connectToDevice(BluetoothDevice device) async {
     var canProceed = true;
     try {
+      _log('Connecting to ${device.remoteId}');
       await device.connect(
         timeout: const Duration(seconds: 10),
         autoConnect: false,
@@ -146,7 +179,7 @@ class ControlState extends ChangeNotifier {
     } catch (error) {
       // Ignore if already connected; otherwise treat as failure.
       if (!error.toString().contains('already connected')) {
-        debugPrint('BLE connect error: $error');
+        _log('Connect error: $error');
         canProceed = false;
       }
     }
@@ -158,12 +191,15 @@ class ControlState extends ChangeNotifier {
     // Ensure the connection is fully established before discovery.
     await _waitForConnected(device);
     if (!await _isConnected(device)) {
+      _log('Connect failed: device did not reach connected state');
       _setDisconnected();
       return;
     }
+    _log('Connected at transport layer');
 
     _connectionSubscription?.cancel();
     _connectionSubscription = device.connectionState.listen((state) {
+      _log('Connection state: $state');
       if (state == BluetoothConnectionState.disconnected) {
         _setDisconnected();
       }
@@ -177,6 +213,7 @@ class ControlState extends ChangeNotifier {
       } catch (_) {}
     }
     var services = await _discoverServicesWithRetry(device);
+    _log('Service discovery returned ${services.length} services');
     for (final service in services) {
       if (service.uuid != _serviceUuid) continue;
       for (final characteristic in service.characteristics) {
@@ -184,12 +221,14 @@ class ControlState extends ChangeNotifier {
           _writeCharacteristic = characteristic;
         } else if (characteristic.uuid == _notifyCharacteristicUuid) {
           _notifyCharacteristic = characteristic;
+        } else if (characteristic.uuid == _modeCharacteristicUuid) {
+          _modeCharacteristic = characteristic;
         }
       }
     }
 
     if (_writeCharacteristic == null || _notifyCharacteristic == null) {
-      debugPrint('BLE characteristics not found.');
+      _log('Required characteristics not found. Retrying connect...');
       // Retry once after a short reconnect (Android GATT flakiness).
       try {
         await device.disconnect();
@@ -203,6 +242,7 @@ class ControlState extends ChangeNotifier {
       } catch (_) {}
       await _waitForConnected(device);
       services = await _discoverServicesWithRetry(device);
+      _log('Retry discovery returned ${services.length} services');
       for (final service in services) {
         if (service.uuid != _serviceUuid) continue;
         for (final characteristic in service.characteristics) {
@@ -210,10 +250,13 @@ class ControlState extends ChangeNotifier {
             _writeCharacteristic = characteristic;
           } else if (characteristic.uuid == _notifyCharacteristicUuid) {
             _notifyCharacteristic = characteristic;
+          } else if (characteristic.uuid == _modeCharacteristicUuid) {
+            _modeCharacteristic = characteristic;
           }
         }
       }
       if (_writeCharacteristic == null || _notifyCharacteristic == null) {
+        _log('Retry failed: still missing required characteristics');
         await device.disconnect();
         _setDisconnected();
         return;
@@ -221,13 +264,16 @@ class ControlState extends ChangeNotifier {
     }
 
     await _notifyCharacteristic!.setNotifyValue(true);
+    _log('Notifications enabled');
     _notifySubscription?.cancel();
     _notifySubscription = _notifyCharacteristic!.onValueReceived.listen(
       _handleTelemetry,
-      onError: (error) => debugPrint('Notify error: $error'),
+      onError: (error) => _log('Notify error: $error'),
     );
     _startKeepAlive();
+    await _sendModeToRobot(isAutonomous);
     await sendCommand(joystickX, joystickY);
+    _log('Connection ready');
 
     isConnecting = false;
     telemetryData = _copyTelemetry(
@@ -266,7 +312,18 @@ class ControlState extends ChangeNotifier {
         withoutResponse: true,
       );
     } catch (error) {
-      debugPrint('BLE write error: $error');
+      _log('Write error: $error');
+    }
+  }
+
+  Future<void> _sendModeToRobot(bool autonomous) async {
+    if (_modeCharacteristic == null || !telemetryData.isConnected) return;
+    final payload = Uint8List.fromList([autonomous ? 1 : 0]);
+    try {
+      await _modeCharacteristic!.write(payload, withoutResponse: false);
+      _log('Mode write: ${autonomous ? 'AUTO' : 'MANUAL'}');
+    } catch (error) {
+      _log('Mode write error: $error');
     }
   }
 
@@ -330,7 +387,7 @@ class ControlState extends ChangeNotifier {
         final services = await device.discoverServices();
         if (services.isNotEmpty) return services;
       } catch (error) {
-        debugPrint('BLE discover services error: $error');
+        _log('Discover services error: $error');
       }
       await Future.delayed(const Duration(milliseconds: 250));
     }
@@ -384,6 +441,7 @@ class ControlState extends ChangeNotifier {
 
     _notifyCharacteristic = null;
     _writeCharacteristic = null;
+    _modeCharacteristic = null;
     _device = null;
   }
 
@@ -405,6 +463,23 @@ class ControlState extends ChangeNotifier {
   void _setDisconnected() {
     isConnecting = false;
     telemetryData = _copyTelemetry(isConnected: false);
+    _log('Disconnected');
+    notifyListeners();
+  }
+
+  void clearDebugLogs() {
+    _debugLogs.clear();
+    notifyListeners();
+  }
+
+  void _log(String message) {
+    final timestamp = DateTime.now().toIso8601String().substring(11, 19);
+    final line = '[$timestamp] BLE: $message';
+    _debugLogs.add(line);
+    if (_debugLogs.length > 120) {
+      _debugLogs.removeRange(0, _debugLogs.length - 120);
+    }
+    debugPrint(line);
     notifyListeners();
   }
 
