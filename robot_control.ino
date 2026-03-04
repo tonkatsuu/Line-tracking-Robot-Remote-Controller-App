@@ -86,8 +86,8 @@
    }
  }
  
- void handleJoystick(int8_t x, int8_t y) {
-   float fx = -x / 127.0f; // Invert X so right = positive turn.
+void handleJoystick(int8_t x, int8_t y) {
+  float fx = x / 127.0f;
    float fy = y / 127.0f;
  
    if (abs(fx) < DEADZONE) fx = 0;

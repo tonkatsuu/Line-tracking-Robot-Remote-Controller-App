@@ -237,8 +237,7 @@ class ControlState extends ChangeNotifier {
       return (curved * maxScale).clamp(-1.0, 1.0);
     }
 
-    // Invert X to align joystick direction with robot turning.
-    final scaledX = (applyCurve(-x) * 127).round();
+    final scaledX = (applyCurve(x) * 127).round();
     final scaledY = (applyCurve(y) * 127).round();
     final payload = Uint8List.fromList([
       scaledX & 0xFF,
