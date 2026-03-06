@@ -1,9 +1,31 @@
 import 'package:flutter/material.dart';
 
-import 'screens/control_screen.dart';
+import 'controllers/control_state.dart';
+import 'screens/auto_page.dart';
+import 'screens/connection_screen.dart';
+import 'screens/manual_page.dart';
 
-class RobotControlApp extends StatelessWidget {
+class RobotControlApp extends StatefulWidget {
   const RobotControlApp({super.key});
+
+  @override
+  State<RobotControlApp> createState() => _RobotControlAppState();
+}
+
+class _RobotControlAppState extends State<RobotControlApp> {
+  late final ControlState _controlState;
+
+  @override
+  void initState() {
+    super.initState();
+    _controlState = ControlState();
+  }
+
+  @override
+  void dispose() {
+    _controlState.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +48,12 @@ class RobotControlApp extends StatelessWidget {
           bodyMedium: TextStyle(fontSize: 14),
         ),
       ),
-      home: const ControlScreen(),
+      initialRoute: '/',
+      routes: {
+        '/': (_) => ConnectionScreen(controlState: _controlState),
+        '/manual': (_) => ManualPage(controlState: _controlState),
+        '/auto': (_) => AutoPage(controlState: _controlState),
+      },
     );
   }
 }

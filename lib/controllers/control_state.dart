@@ -13,19 +13,28 @@ class ControlState extends ChangeNotifier {
     // Connection is triggered manually via the UI.
   }
 
+  static const String serviceUuidString =
+      '19B10000-E8F2-537E-4F6C-D104768A1214';
+  static const String cmdUuidString =
+      '19B10001-E8F2-537E-4F6C-D104768A1214';
+  static const String telemetryUuidString =
+      '19B10002-E8F2-537E-4F6C-D104768A1214';
+  static const String modeUuidString =
+      '19B10003-E8F2-537E-4F6C-D104768A1214';
   static const String _deviceName = 'Robot-Control-R4';
-  static final Guid _serviceUuid = Guid('19B10000-E8F2-537E-4F6C-D104768A1214');
-  static final Guid _writeCharacteristicUuid =
-      Guid('19B10001-E8F2-537E-4F6C-D104768A1214');
-  static final Guid _notifyCharacteristicUuid =
-      Guid('19B10002-E8F2-537E-4F6C-D104768A1214');
-  static final Guid _modeCharacteristicUuid =
-      Guid('19B10003-E8F2-537E-4F6C-D104768A1214');
+  static final Guid _serviceUuid = Guid(serviceUuidString);
+  static final Guid _writeCharacteristicUuid = Guid(cmdUuidString);
+  static final Guid _notifyCharacteristicUuid = Guid(telemetryUuidString);
+  static final Guid _modeCharacteristicUuid = Guid(modeUuidString);
 
   double joystickX = 0;
   double joystickY = 0;
   bool isAutonomous = false;
+  bool missionRunning = false;
+  bool trailerPickupEngaged = false;
   bool isConnecting = false;
+  double maxSpeed = 0.7;
+  double? distanceToObjectCm;
   TelemetryData telemetryData = const TelemetryData(
     batteryVoltage: 12.4,
     speed: 0,
@@ -63,7 +72,29 @@ class ControlState extends ChangeNotifier {
   void setMode(bool autonomous) {
     if (autonomous == isAutonomous) return;
     isAutonomous = autonomous;
+    missionRunning = autonomous;
     unawaited(_sendModeToRobot(autonomous));
+    notifyListeners();
+  }
+
+  void setMaxSpeed(double value) {
+    final clamped = value.clamp(0.0, 1.0);
+    if (clamped == maxSpeed) return;
+    maxSpeed = clamped;
+    notifyListeners();
+  }
+
+  void toggleTrailerPickup() {
+    trailerPickupEngaged = !trailerPickupEngaged;
+    _log('Trailer action: ${trailerPickupEngaged ? 'PICKUP' : 'RELEASE'}');
+    notifyListeners();
+  }
+
+  void setMissionRunning(bool running) {
+    if (missionRunning == running && isAutonomous == running) return;
+    missionRunning = running;
+    isAutonomous = running;
+    unawaited(_sendModeToRobot(running));
     notifyListeners();
   }
 
@@ -299,8 +330,8 @@ class ControlState extends ChangeNotifier {
       return (curved * maxScale).clamp(-1.0, 1.0);
     }
 
-    final scaledX = (applyCurve(x) * 127).round();
-    final scaledY = (applyCurve(y) * 127).round();
+    final scaledX = (applyCurve(x * maxSpeed) * 127).round();
+    final scaledY = (applyCurve(y * maxSpeed) * 127).round();
     final payload = Uint8List.fromList([
       scaledX & 0xFF,
       scaledY & 0xFF,
@@ -335,6 +366,10 @@ class ControlState extends ChangeNotifier {
     final leftMotor = _toSignedInt8(data[3]);
     final rightMotor = _toSignedInt8(data[4]);
     final sensorBits = data[5];
+    if (data.length >= 8) {
+      final distanceRaw = data[6] | (data[7] << 8);
+      distanceToObjectCm = distanceRaw.toDouble();
+    }
     final irSensors = List<bool>.generate(
       5,
       (index) => (sensorBits & (1 << index)) != 0,
@@ -462,6 +497,8 @@ class ControlState extends ChangeNotifier {
 
   void _setDisconnected() {
     isConnecting = false;
+    missionRunning = false;
+    isAutonomous = false;
     telemetryData = _copyTelemetry(isConnected: false);
     _log('Disconnected');
     notifyListeners();
