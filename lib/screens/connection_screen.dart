@@ -30,60 +30,69 @@ class ConnectionScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(18),
                 child: Column(
                   children: [
-                    _GlassPanel(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            'BLE UUID HUD',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'SERVICE: 19B10000-E8F2-537E-4F6C-D104768A1214',
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                          Text(
-                            'CMD: 19B10001-E8F2-537E-4F6C-D104768A1214',
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                        ],
+                    const Text(
+                      'Robot Remote Controller by May',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
                       ),
                     ),
                     const Spacer(),
                     SizedBox(
-                      width: 320,
-                      height: 84,
-                      child: ElevatedButton(
-                        onPressed: connecting
-                            ? null
-                            : connected
-                                ? controlState.disconnectFromDevice
-                                : controlState.connectToDevice,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: connected
-                              ? const Color(0xFFFF5252)
-                              : const Color(0xFF00B0FF),
-                          foregroundColor: Colors.white,
-                          textStyle: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.8,
+                      width: 290,
+                      height: 70,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          gradient: LinearGradient(
+                            colors: connected
+                                ? const [Color(0xFFFF6B6B), Color(0xFFFF3D3D)]
+                                : const [Color(0xFF29B6F6), Color(0xFF0277BD)],
                           ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: (connected
+                                      ? const Color(0xFFFF5252)
+                                      : const Color(0xFF00B0FF))
+                                  .withOpacity(0.4),
+                              blurRadius: 18,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
                         ),
-                        child: Text(
-                          connecting
-                              ? 'CONNECTING...'
+                        child: ElevatedButton.icon(
+                          onPressed: connecting
+                              ? null
                               : connected
-                                  ? 'DISCONNECT'
-                                  : 'CONNECT TO ROBOT',
+                                  ? controlState.disconnectFromDevice
+                                  : controlState.connectToDevice,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                            shadowColor: Colors.transparent,
+                            textStyle: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.8,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          icon: Icon(
+                            connected ? Icons.bluetooth_disabled : Icons.bluetooth,
+                            size: 24,
+                          ),
+                          label: Text(
+                            connecting
+                                ? 'CONNECTING...'
+                                : connected
+                                    ? 'DISCONNECT'
+                                    : 'CONNECT TO ROBOT',
+                          ),
                         ),
                       ),
                     ),
