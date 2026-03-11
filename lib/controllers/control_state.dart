@@ -33,7 +33,7 @@ class ControlState extends ChangeNotifier {
   bool missionRunning = false;
   bool trailerPickupEngaged = false;
   bool isConnecting = false;
-  double maxSpeed = 0.7;
+  int speedLimitPwm = 130;
   double? distanceToObjectCm;
   TelemetryData telemetryData = const TelemetryData(
     batteryVoltage: 12.4,
@@ -77,10 +77,11 @@ class ControlState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setMaxSpeed(double value) {
-    final clamped = value.clamp(0.0, 1.0);
-    if (clamped == maxSpeed) return;
-    maxSpeed = clamped;
+  void setSpeedPreset(int pwm) {
+    final clamped = pwm.clamp(100, 170);
+    if (clamped == speedLimitPwm) return;
+    speedLimitPwm = clamped;
+    _log('Speed preset set to $speedLimitPwm');
     notifyListeners();
   }
 
@@ -330,8 +331,9 @@ class ControlState extends ChangeNotifier {
       return (curved * maxScale).clamp(-1.0, 1.0);
     }
 
-    final scaledX = (applyCurve(x * maxSpeed) * 127).round();
-    final scaledY = (applyCurve(y * maxSpeed) * 127).round();
+    final speedScale = speedLimitPwm / 170.0;
+    final scaledX = (applyCurve(x * speedScale) * 127).round();
+    final scaledY = (applyCurve(y * speedScale) * 127).round();
     final payload = Uint8List.fromList([
       scaledX & 0xFF,
       scaledY & 0xFF,

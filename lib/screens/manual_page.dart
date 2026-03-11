@@ -49,6 +49,7 @@ class _ManualPageState extends State<ManualPage> {
       body: AnimatedBuilder(
         animation: widget.controlState,
         builder: (context, _) {
+          final telemetry = widget.controlState.telemetryData;
           return Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -79,78 +80,67 @@ class _ManualPageState extends State<ManualPage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     Expanded(
                       child: Row(
                         children: [
                           Expanded(
-                            flex: 5,
+                            flex: 6,
                             child: _GlassPanel(
-                              child: Joystick(
-                                onJoystickChanged: widget.controlState.updateJoystick,
-                                knobColor: const Color(0xFF00B0FF),
+                              child: SizedBox.expand(
+                                child: Joystick(
+                                  onJoystickChanged:
+                                      widget.controlState.updateJoystick,
+                                  knobColor: const Color(0xFF00B0FF),
+                                ),
                               ),
                             ),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
-                            flex: 4,
+                            flex: 5,
                             child: _GlassPanel(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'Speed Limit',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
                                   Text(
-                                    '${(widget.controlState.maxSpeed * 100).round()}%',
-                                    style: const TextStyle(
-                                      color: Color(0xFF00B0FF),
+                                    'Telemetry',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.95),
+                                      fontSize: 20,
                                       fontWeight: FontWeight.w700,
-                                      fontSize: 28,
                                     ),
                                   ),
-                                  Slider(
-                                    min: 0.0,
-                                    max: 1.0,
-                                    value: widget.controlState.maxSpeed,
-                                    onChanged: widget.controlState.setMaxSpeed,
+                                  const SizedBox(height: 10),
+                                  _MetricTile(
+                                    label: 'Battery',
+                                    value:
+                                        '${telemetry.batteryVoltage.toStringAsFixed(2)} V',
                                   ),
-                                  const SizedBox(height: 20),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    height: 68,
-                                    child: ElevatedButton(
-                                      onPressed: widget.controlState.toggleTrailerPickup,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                            widget.controlState.trailerPickupEngaged
-                                                ? const Color(0xFF00B0FF)
-                                                : const Color(0xFF455A64),
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(16),
-                                        ),
-                                      ),
-                                      child: Text(
-                                        widget.controlState.trailerPickupEngaged
-                                            ? 'PICKUP TRAILER: ON'
-                                            : 'PICKUP TRAILER',
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ),
+                                  _MetricTile(
+                                    label: 'RSSI',
+                                    value:
+                                        '${telemetry.signalStrength.toStringAsFixed(0)} dBm',
+                                  ),
+                                  _MetricTile(
+                                    label: 'Sensor Health',
+                                    value: telemetry.sensorStatus,
+                                  ),
+                                  _MetricTile(
+                                    label: 'Robot Speed',
+                                    value: '${telemetry.speed.toStringAsFixed(0)}%',
+                                  ),
+                                  _MetricTile(
+                                    label: 'Left PWM',
+                                    value: '${telemetry.leftMotor}',
+                                  ),
+                                  _MetricTile(
+                                    label: 'Right PWM',
+                                    value: '${telemetry.rightMotor}',
                                   ),
                                   const Spacer(),
                                   Text(
-                                    'Connection: ${widget.controlState.telemetryData.isConnected ? 'Connected' : 'Disconnected'}',
+                                    'Connection: ${telemetry.isConnected ? 'Connected' : 'Disconnected'}',
                                     style: const TextStyle(color: Colors.white70),
                                   ),
                                 ],
@@ -162,7 +152,36 @@ class _ManualPageState extends State<ManualPage> {
                     ),
                     const SizedBox(height: 12),
                     _GlassPanel(
-                      child: _TelemetryGrid(controlState: widget.controlState),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _SpeedPresetButton(
+                              label: 'SLOW',
+                              pwm: 100,
+                              selected: widget.controlState.speedLimitPwm == 100,
+                              onTap: () => widget.controlState.setSpeedPreset(100),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _SpeedPresetButton(
+                              label: 'MEDIUM',
+                              pwm: 130,
+                              selected: widget.controlState.speedLimitPwm == 130,
+                              onTap: () => widget.controlState.setSpeedPreset(130),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _SpeedPresetButton(
+                              label: 'FAST',
+                              pwm: 170,
+                              selected: widget.controlState.speedLimitPwm == 170,
+                              onTap: () => widget.controlState.setSpeedPreset(170),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -200,39 +219,6 @@ class _GlassPanel extends StatelessWidget {
   }
 }
 
-class _TelemetryGrid extends StatelessWidget {
-  const _TelemetryGrid({required this.controlState});
-
-  final ControlState controlState;
-
-  @override
-  Widget build(BuildContext context) {
-    final telemetry = controlState.telemetryData;
-    return GridView.count(
-      crossAxisCount: 3,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 10,
-      crossAxisSpacing: 10,
-      childAspectRatio: 3.2,
-      children: [
-        _MetricTile(
-          label: 'Battery',
-          value: '${telemetry.batteryVoltage.toStringAsFixed(2)} V',
-        ),
-        _MetricTile(
-          label: 'RSSI',
-          value: '${telemetry.signalStrength.toStringAsFixed(0)} dBm',
-        ),
-        _MetricTile(label: 'Health', value: telemetry.sensorStatus),
-        _MetricTile(label: 'Speed', value: '${telemetry.speed.toStringAsFixed(0)}%'),
-        _MetricTile(label: 'Left PWM', value: '${telemetry.leftMotor}'),
-        _MetricTile(label: 'Right PWM', value: '${telemetry.rightMotor}'),
-      ],
-    );
-  }
-}
-
 class _MetricTile extends StatelessWidget {
   const _MetricTile({required this.label, required this.value});
 
@@ -242,7 +228,8 @@ class _MetricTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
@@ -260,6 +247,61 @@ class _MetricTile extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SpeedPresetButton extends StatelessWidget {
+  const _SpeedPresetButton({
+    required this.label,
+    required this.pwm,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final int pwm;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? const Color(0xFF00B0FF) : const Color(0xFF4A6070);
+    return SizedBox(
+      height: 64,
+      child: ElevatedButton(
+        onPressed: onTap,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          elevation: selected ? 8 : 1,
+          shadowColor: selected
+              ? const Color(0xFF00B0FF).withOpacity(0.7)
+              : Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(
+              color: selected
+                  ? const Color(0xFF81D4FA)
+                  : Colors.white.withOpacity(0.15),
+              width: selected ? 2.2 : 1,
+            ),
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+            Text(
+              '$pwm',
+              style: const TextStyle(fontSize: 13, color: Colors.white70),
+            ),
+          ],
+        ),
       ),
     );
   }

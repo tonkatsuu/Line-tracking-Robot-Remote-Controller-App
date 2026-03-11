@@ -1,14 +1,40 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../controllers/control_state.dart';
 import '../widgets/line_sensor_widget.dart';
 
-class AutoPage extends StatelessWidget {
+class AutoPage extends StatefulWidget {
   const AutoPage({super.key, required this.controlState});
 
   final ControlState controlState;
+
+  @override
+  State<AutoPage> createState() => _AutoPageState();
+}
+
+class _AutoPageState extends State<AutoPage> {
+  @override
+  void initState() {
+    super.initState();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  }
+
+  @override
+  void dispose() {
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,12 +42,12 @@ class AutoPage extends StatelessWidget {
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: const Color(0xFFB71C1C),
         foregroundColor: Colors.white,
-        onPressed: () => controlState.triggerEmergencyStop(),
+        onPressed: () => widget.controlState.triggerEmergencyStop(),
         label: const Text('E-STOP'),
         icon: const Icon(Icons.warning_amber_rounded),
       ),
       body: AnimatedBuilder(
-        animation: controlState,
+        animation: widget.controlState,
         builder: (context, _) {
           return Container(
             decoration: const BoxDecoration(
@@ -68,75 +94,94 @@ class AutoPage extends StatelessWidget {
                           ),
                           const SizedBox(height: 14),
                           LineSensorWidget(
-                            sensors: controlState.telemetryData.irSensors,
+                            sensors: widget.controlState.telemetryData.irSensors,
                             activeColor: const Color(0xFF00E676),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _ActionButton(
-                            label: 'START MISSION',
-                            color: const Color(0xFF00E676),
-                            onTap: () => controlState.setMissionRunning(true),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _ActionButton(
-                            label: 'STOP / ABORT',
-                            color: const Color(0xFFFF5252),
-                            onTap: () => controlState.setMissionRunning(false),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
                     Expanded(
-                      child: _GlassPanel(
-                        borderColor: const Color(0x6600E676),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _MetricRow(
-                              label: 'Mission State',
-                              value: controlState.missionRunning ? 'RUNNING' : 'IDLE',
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: _GlassPanel(
+                              borderColor: const Color(0x6600E676),
+                              child: Column(
+                                children: [
+                                  Expanded(
+                                    child: _ActionButton(
+                                      label: 'START MISSION',
+                                      color: const Color(0xFF00E676),
+                                      onTap: () =>
+                                          widget.controlState.setMissionRunning(true),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Expanded(
+                                    child: _ActionButton(
+                                      label: 'STOP / ABORT',
+                                      color: const Color(0xFFFF5252),
+                                      onTap: () => widget.controlState
+                                          .setMissionRunning(false),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                            _MetricRow(
-                              label: 'Robot Speed',
-                              value: '${controlState.telemetryData.speed.toStringAsFixed(0)}%',
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            flex: 5,
+                            child: _GlassPanel(
+                              borderColor: const Color(0x6600E676),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _MetricRow(
+                                    label: 'Mission State',
+                                    value: widget.controlState.missionRunning
+                                        ? 'RUNNING'
+                                        : 'IDLE',
+                                  ),
+                                  _MetricRow(
+                                    label: 'Robot Speed',
+                                    value:
+                                        '${widget.controlState.telemetryData.speed.toStringAsFixed(0)}%',
+                                  ),
+                                  _MetricRow(
+                                    label: 'Distance to Object',
+                                    value: widget.controlState.distanceToObjectCm ==
+                                            null
+                                        ? '--'
+                                        : '${widget.controlState.distanceToObjectCm!.toStringAsFixed(0)} cm',
+                                  ),
+                                  const Divider(color: Colors.white24, height: 24),
+                                  _MetricRow(
+                                    label: 'Battery',
+                                    value:
+                                        '${widget.controlState.telemetryData.batteryVoltage.toStringAsFixed(2)} V',
+                                  ),
+                                  _MetricRow(
+                                    label: 'RSSI',
+                                    value:
+                                        '${widget.controlState.telemetryData.signalStrength.toStringAsFixed(0)} dBm',
+                                  ),
+                                  _MetricRow(
+                                    label: 'Sensor Health',
+                                    value: widget.controlState.telemetryData.sensorStatus,
+                                  ),
+                                  _MetricRow(
+                                    label: 'Left / Right PWM',
+                                    value:
+                                        '${widget.controlState.telemetryData.leftMotor} / ${widget.controlState.telemetryData.rightMotor}',
+                                  ),
+                                ],
+                              ),
                             ),
-                            _MetricRow(
-                              label: 'Distance to Object',
-                              value: controlState.distanceToObjectCm == null
-                                  ? '--'
-                                  : '${controlState.distanceToObjectCm!.toStringAsFixed(0)} cm',
-                            ),
-                            const Divider(color: Colors.white24, height: 24),
-                            _MetricRow(
-                              label: 'Battery',
-                              value:
-                                  '${controlState.telemetryData.batteryVoltage.toStringAsFixed(2)} V',
-                            ),
-                            _MetricRow(
-                              label: 'RSSI',
-                              value:
-                                  '${controlState.telemetryData.signalStrength.toStringAsFixed(0)} dBm',
-                            ),
-                            _MetricRow(
-                              label: 'Sensor Health',
-                              value: controlState.telemetryData.sensorStatus,
-                            ),
-                            _MetricRow(
-                              label: 'Left / Right PWM',
-                              value:
-                                  '${controlState.telemetryData.leftMotor} / ${controlState.telemetryData.rightMotor}',
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -163,8 +208,7 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 64,
+    return SizedBox.expand(
       child: ElevatedButton(
         onPressed: onTap,
         style: ElevatedButton.styleFrom(
@@ -174,7 +218,8 @@ class _ActionButton extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
         ),
       ),
     );
