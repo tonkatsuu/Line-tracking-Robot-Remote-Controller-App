@@ -30,6 +30,8 @@ const float DEADZONE = 0.10f;
 const int MAX_SPEED = 170;
 bool autoEnabled = false;
 bool trailerPickupEngaged = false;
+int currentLeftPwm = 0;
+int currentRightPwm = 0;
 Servo trailerServo;
 const int trailerRaisedAngle = 150;
 const int trailerPickupAngle = 120;
@@ -161,6 +163,8 @@ void handleJoystick(int8_t x, int8_t y) {
  
    // LEFT MOTOR (invert to fix reversed direction)
    left = -left;
+  currentLeftPwm = left;
+  currentRightPwm = right;
  
    // RIGHT MOTOR
    if (right > 0) {
@@ -186,6 +190,8 @@ void handleJoystick(int8_t x, int8_t y) {
  }
  
  void stopMotors() {
+  currentLeftPwm = 0;
+  currentRightPwm = 0;
    stopLeft();
    stopRight();
  }
@@ -202,9 +208,9 @@ void handleJoystick(int8_t x, int8_t y) {
  
  void sendTelemetry() {
    uint16_t voltageCv = 740; // 7.40V
-   uint8_t speed = 42;       // mock
-   int8_t leftMotor = 40;
-   int8_t rightMotor = 45;
+  uint8_t speed = (uint8_t)((max(abs(currentLeftPwm), abs(currentRightPwm)) * 100) / MAX_SPEED);
+  int8_t leftMotor = (int8_t)((currentLeftPwm * 100) / MAX_SPEED);
+  int8_t rightMotor = (int8_t)((currentRightPwm * 100) / MAX_SPEED);
   uint8_t sensorBits = 0;
   if (digitalRead(leftIR) == LOW) sensorBits |= (1 << 0);
   if (digitalRead(midIR) == LOW) sensorBits |= (1 << 1);
