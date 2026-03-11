@@ -21,11 +21,14 @@ class ControlState extends ChangeNotifier {
       '19B10002-E8F2-537E-4F6C-D104768A1214';
   static const String modeUuidString =
       '19B10003-E8F2-537E-4F6C-D104768A1214';
+  static const String pickupUuidString =
+      '19B10004-E8F2-537E-4F6C-D104768A1214';
   static const String _deviceName = 'Robot-Control-R4';
   static final Guid _serviceUuid = Guid(serviceUuidString);
   static final Guid _writeCharacteristicUuid = Guid(cmdUuidString);
   static final Guid _notifyCharacteristicUuid = Guid(telemetryUuidString);
   static final Guid _modeCharacteristicUuid = Guid(modeUuidString);
+  static final Guid _pickupCharacteristicUuid = Guid(pickupUuidString);
 
   double joystickX = 0;
   double joystickY = 0;
@@ -56,6 +59,7 @@ class ControlState extends ChangeNotifier {
   BluetoothCharacteristic? _writeCharacteristic;
   BluetoothCharacteristic? _notifyCharacteristic;
   BluetoothCharacteristic? _modeCharacteristic;
+  BluetoothCharacteristic? _pickupCharacteristic;
   StreamSubscription<List<ScanResult>>? _scanSubscription;
   StreamSubscription<List<int>>? _notifySubscription;
   StreamSubscription<BluetoothConnectionState>? _connectionSubscription;
@@ -87,6 +91,7 @@ class ControlState extends ChangeNotifier {
 
   void toggleTrailerPickup() {
     trailerPickupEngaged = !trailerPickupEngaged;
+    unawaited(_sendTrailerToRobot(trailerPickupEngaged));
     _log('Trailer action: ${trailerPickupEngaged ? 'PICKUP' : 'RELEASE'}');
     notifyListeners();
   }
@@ -255,6 +260,8 @@ class ControlState extends ChangeNotifier {
           _notifyCharacteristic = characteristic;
         } else if (characteristic.uuid == _modeCharacteristicUuid) {
           _modeCharacteristic = characteristic;
+        } else if (characteristic.uuid == _pickupCharacteristicUuid) {
+          _pickupCharacteristic = characteristic;
         }
       }
     }
@@ -284,6 +291,8 @@ class ControlState extends ChangeNotifier {
             _notifyCharacteristic = characteristic;
           } else if (characteristic.uuid == _modeCharacteristicUuid) {
             _modeCharacteristic = characteristic;
+          } else if (characteristic.uuid == _pickupCharacteristicUuid) {
+            _pickupCharacteristic = characteristic;
           }
         }
       }
@@ -304,6 +313,7 @@ class ControlState extends ChangeNotifier {
     );
     _startKeepAlive();
     await _sendModeToRobot(isAutonomous);
+    await _sendTrailerToRobot(trailerPickupEngaged);
     await sendCommand(joystickX, joystickY);
     _log('Connection ready');
 
@@ -357,6 +367,17 @@ class ControlState extends ChangeNotifier {
       _log('Mode write: ${autonomous ? 'AUTO' : 'MANUAL'}');
     } catch (error) {
       _log('Mode write error: $error');
+    }
+  }
+
+  Future<void> _sendTrailerToRobot(bool pickup) async {
+    if (_pickupCharacteristic == null || !telemetryData.isConnected) return;
+    final payload = Uint8List.fromList([pickup ? 1 : 0]);
+    try {
+      await _pickupCharacteristic!.write(payload, withoutResponse: false);
+      _log('Trailer write: ${pickup ? 'PICKUP' : 'RELEASE'}');
+    } catch (error) {
+      _log('Trailer write error: $error');
     }
   }
 
@@ -479,6 +500,7 @@ class ControlState extends ChangeNotifier {
     _notifyCharacteristic = null;
     _writeCharacteristic = null;
     _modeCharacteristic = null;
+    _pickupCharacteristic = null;
     _device = null;
   }
 
