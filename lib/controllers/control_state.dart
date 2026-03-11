@@ -307,7 +307,7 @@ class ControlState extends ChangeNotifier {
     await _notifyCharacteristic!.setNotifyValue(true);
     _log('Notifications enabled');
     _notifySubscription?.cancel();
-    _notifySubscription = _notifyCharacteristic!.onValueReceived.listen(
+    _notifySubscription = _notifyCharacteristic!.lastValueStream.listen(
       _handleTelemetry,
       onError: (error) => _log('Notify error: $error'),
     );
