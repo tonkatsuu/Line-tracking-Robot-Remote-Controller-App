@@ -161,6 +161,17 @@ class _ManualPageState extends State<ManualPage> {
                                       Expanded(
                                         child: _SpeedPresetButton(
                                           label: 'SLOW',
+                                          pwm: 70,
+                                          selected:
+                                              widget.controlState.speedLimitPwm == 70,
+                                          onTap: () => widget.controlState
+                                              .setSpeedPreset(70),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: _SpeedPresetButton(
+                                          label: 'MED',
                                           pwm: 100,
                                           selected:
                                               widget.controlState.speedLimitPwm == 100,
@@ -171,23 +182,12 @@ class _ManualPageState extends State<ManualPage> {
                                       const SizedBox(width: 10),
                                       Expanded(
                                         child: _SpeedPresetButton(
-                                          label: 'MEDIUM',
+                                          label: 'FAST',
                                           pwm: 130,
                                           selected:
                                               widget.controlState.speedLimitPwm == 130,
                                           onTap: () => widget.controlState
                                               .setSpeedPreset(130),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: _SpeedPresetButton(
-                                          label: 'FAST',
-                                          pwm: 170,
-                                          selected:
-                                              widget.controlState.speedLimitPwm == 170,
-                                          onTap: () => widget.controlState
-                                              .setSpeedPreset(170),
                                         ),
                                       ),
                                     ],

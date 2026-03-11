@@ -78,7 +78,7 @@ class ControlState extends ChangeNotifier {
   }
 
   void setSpeedPreset(int pwm) {
-    final clamped = pwm.clamp(100, 170);
+    final clamped = pwm.clamp(70, 130);
     if (clamped == speedLimitPwm) return;
     speedLimitPwm = clamped;
     _log('Speed preset set to $speedLimitPwm');
