@@ -6,12 +6,14 @@ static const char* CMD_UUID       = "19B10001-E8F2-537E-4F6C-D104768A1214";
 static const char* TELEMETRY_UUID = "19B10002-E8F2-537E-4F6C-D104768A1214";
 static const char* MODE_UUID      = "19B10003-E8F2-537E-4F6C-D104768A1214";
 static const char* PICKUP_UUID    = "19B10004-E8F2-537E-4F6C-D104768A1214";
+static const char* ESTOP_UUID     = "19B10005-E8F2-537E-4F6C-D104768A1214";
  
 BLEService robotService(SERVICE_UUID);
 BLECharacteristic commandChar(CMD_UUID, BLEWrite | BLEWriteWithoutResponse, 2);
 BLECharacteristic telemetryChar(TELEMETRY_UUID, BLENotify, 6);
 BLECharacteristic modeChar(MODE_UUID, BLEWrite, 1);
 BLECharacteristic pickupChar(PICKUP_UUID, BLEWrite, 1);
+BLECharacteristic estopChar(ESTOP_UUID, BLEWrite, 1);
  
 const int M1A = 11;  // Right motor forward
 const int M1B = 10;  // Right motor reverse
@@ -64,6 +66,7 @@ const int trailerPickupAngle = 120;
    robotService.addCharacteristic(telemetryChar);
   robotService.addCharacteristic(modeChar);
   robotService.addCharacteristic(pickupChar);
+  robotService.addCharacteristic(estopChar);
    BLE.addService(robotService);
  
    uint8_t zeroCmd[2] = {0, 0};
@@ -110,6 +113,16 @@ const int trailerPickupAngle = 120;
         );
         Serial.print("Trailer pickup: ");
         Serial.println(trailerPickupEngaged ? "ENGAGED" : "RELEASED");
+      }
+
+      if (estopChar.written()) {
+        uint8_t estopValue = 0;
+        estopChar.readValue(&estopValue, 1);
+        if (estopValue == 1) {
+          autoEnabled = false;
+          stopMotors();
+          Serial.println("E-STOP triggered");
+        }
       }
 
       if (!autoEnabled && commandChar.written()) {

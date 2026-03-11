@@ -23,12 +23,15 @@ class ControlState extends ChangeNotifier {
       '19B10003-E8F2-537E-4F6C-D104768A1214';
   static const String pickupUuidString =
       '19B10004-E8F2-537E-4F6C-D104768A1214';
+  static const String estopUuidString =
+      '19B10005-E8F2-537E-4F6C-D104768A1214';
   static const String _deviceName = 'Robot-Control-R4';
   static final Guid _serviceUuid = Guid(serviceUuidString);
   static final Guid _writeCharacteristicUuid = Guid(cmdUuidString);
   static final Guid _notifyCharacteristicUuid = Guid(telemetryUuidString);
   static final Guid _modeCharacteristicUuid = Guid(modeUuidString);
   static final Guid _pickupCharacteristicUuid = Guid(pickupUuidString);
+  static final Guid _estopCharacteristicUuid = Guid(estopUuidString);
 
   double joystickX = 0;
   double joystickY = 0;
@@ -60,6 +63,7 @@ class ControlState extends ChangeNotifier {
   BluetoothCharacteristic? _notifyCharacteristic;
   BluetoothCharacteristic? _modeCharacteristic;
   BluetoothCharacteristic? _pickupCharacteristic;
+  BluetoothCharacteristic? _estopCharacteristic;
   StreamSubscription<List<ScanResult>>? _scanSubscription;
   StreamSubscription<List<int>>? _notifySubscription;
   StreamSubscription<BluetoothConnectionState>? _connectionSubscription;
@@ -262,6 +266,8 @@ class ControlState extends ChangeNotifier {
           _modeCharacteristic = characteristic;
         } else if (characteristic.uuid == _pickupCharacteristicUuid) {
           _pickupCharacteristic = characteristic;
+        } else if (characteristic.uuid == _estopCharacteristicUuid) {
+          _estopCharacteristic = characteristic;
         }
       }
     }
@@ -293,6 +299,8 @@ class ControlState extends ChangeNotifier {
             _modeCharacteristic = characteristic;
           } else if (characteristic.uuid == _pickupCharacteristicUuid) {
             _pickupCharacteristic = characteristic;
+          } else if (characteristic.uuid == _estopCharacteristicUuid) {
+            _estopCharacteristic = characteristic;
           }
         }
       }
@@ -501,6 +509,7 @@ class ControlState extends ChangeNotifier {
     _writeCharacteristic = null;
     _modeCharacteristic = null;
     _pickupCharacteristic = null;
+    _estopCharacteristic = null;
     _device = null;
   }
 
@@ -548,12 +557,27 @@ class ControlState extends ChangeNotifier {
     joystickX = 0;
     joystickY = 0;
     emergencyFlash = true;
+    unawaited(_sendEStopToRobot());
+    unawaited(sendCommand(0, 0));
     notifyListeners();
     _flashTimer?.cancel();
     _flashTimer = Timer(const Duration(milliseconds: 500), () {
       emergencyFlash = false;
       notifyListeners();
     });
+  }
+
+  Future<void> _sendEStopToRobot() async {
+    if (_estopCharacteristic == null || !telemetryData.isConnected) return;
+    try {
+      await _estopCharacteristic!.write(
+        Uint8List.fromList([1]),
+        withoutResponse: false,
+      );
+      _log('E-STOP write: TRIGGER');
+    } catch (error) {
+      _log('E-STOP write error: $error');
+    }
   }
 
   @override
