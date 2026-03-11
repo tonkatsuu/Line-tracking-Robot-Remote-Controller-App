@@ -39,13 +39,6 @@ class _ManualPageState extends State<ManualPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFFB71C1C),
-        foregroundColor: Colors.white,
-        onPressed: () => widget.controlState.triggerEmergencyStop(),
-        label: const Text('E-STOP'),
-        icon: const Icon(Icons.warning_amber_rounded),
-      ),
       body: AnimatedBuilder(
         animation: widget.controlState,
         builder: (context, _) {
@@ -78,6 +71,10 @@ class _ManualPageState extends State<ManualPage> {
                             fontWeight: FontWeight.w700,
                           ),
                         ),
+                        const Spacer(),
+                        _TopEStopButton(
+                          onTap: widget.controlState.triggerEmergencyStop,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -86,12 +83,50 @@ class _ManualPageState extends State<ManualPage> {
                         children: [
                           Expanded(
                             flex: 7,
-                            child: _GlassPanel(
-                              child: Joystick(
-                                onJoystickChanged:
-                                    widget.controlState.updateJoystick,
-                                knobColor: const Color(0xFF00B0FF),
-                              ),
+                            child: Stack(
+                              children: [
+                                Positioned.fill(
+                                  child: _GlassPanel(
+                                    child: Joystick(
+                                      onJoystickChanged:
+                                          widget.controlState.updateJoystick,
+                                      knobColor: const Color(0xFF00B0FF),
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  right: 12,
+                                  bottom: 12,
+                                  child: ElevatedButton.icon(
+                                    onPressed:
+                                        widget.controlState.toggleTrailerPickup,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: widget
+                                              .controlState.trailerPickupEngaged
+                                          ? const Color(0xFF00B0FF)
+                                          : const Color(0xFF455A64),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 10,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    icon: const Icon(Icons.hiking, size: 16),
+                                    label: Text(
+                                      widget.controlState.trailerPickupEngaged
+                                          ? 'PICKUP ON'
+                                          : 'PICKUP',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(width: 14),
@@ -205,6 +240,30 @@ class _ManualPageState extends State<ManualPage> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _TopEStopButton extends StatelessWidget {
+  const _TopEStopButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton.icon(
+      onPressed: onTap,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFFB71C1C),
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      icon: const Icon(Icons.warning_amber_rounded, size: 16),
+      label: const Text(
+        'E-STOP',
+        style: TextStyle(fontWeight: FontWeight.w700),
       ),
     );
   }

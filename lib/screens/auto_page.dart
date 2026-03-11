@@ -39,13 +39,6 @@ class _AutoPageState extends State<AutoPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFFB71C1C),
-        foregroundColor: Colors.white,
-        onPressed: () => widget.controlState.triggerEmergencyStop(),
-        label: const Text('E-STOP'),
-        icon: const Icon(Icons.warning_amber_rounded),
-      ),
       body: AnimatedBuilder(
         animation: widget.controlState,
         builder: (context, _) {
@@ -76,6 +69,10 @@ class _AutoPageState extends State<AutoPage> {
                             fontSize: 24,
                             fontWeight: FontWeight.w700,
                           ),
+                        ),
+                        const Spacer(),
+                        _TopEStopButton(
+                          onTap: widget.controlState.triggerEmergencyStop,
                         ),
                       ],
                     ),
@@ -237,6 +234,30 @@ class _ActionButton extends StatelessWidget {
           textAlign: TextAlign.center,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
         ),
+      ),
+    );
+  }
+}
+
+class _TopEStopButton extends StatelessWidget {
+  const _TopEStopButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton.icon(
+      onPressed: onTap,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFFB71C1C),
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      icon: const Icon(Icons.warning_amber_rounded, size: 16),
+      label: const Text(
+        'E-STOP',
+        style: TextStyle(fontWeight: FontWeight.w700),
       ),
     );
   }
