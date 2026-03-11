@@ -139,43 +139,59 @@ class _AutoPageState extends State<AutoPage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  _MetricRow(
-                                    label: 'Mission State',
-                                    value: widget.controlState.missionRunning
-                                        ? 'RUNNING'
-                                        : 'IDLE',
-                                  ),
-                                  _MetricRow(
-                                    label: 'Robot Speed',
-                                    value:
-                                        '${widget.controlState.telemetryData.speed.toStringAsFixed(0)}%',
-                                  ),
-                                  _MetricRow(
-                                    label: 'Distance to Object',
-                                    value: widget.controlState.distanceToObjectCm ==
-                                            null
-                                        ? '--'
-                                        : '${widget.controlState.distanceToObjectCm!.toStringAsFixed(0)} cm',
-                                  ),
-                                  const Divider(color: Colors.white24, height: 24),
-                                  _MetricRow(
-                                    label: 'Battery',
-                                    value:
-                                        '${widget.controlState.telemetryData.batteryVoltage.toStringAsFixed(2)} V',
-                                  ),
-                                  _MetricRow(
-                                    label: 'RSSI',
-                                    value:
-                                        '${widget.controlState.telemetryData.signalStrength.toStringAsFixed(0)} dBm',
-                                  ),
-                                  _MetricRow(
-                                    label: 'Sensor Health',
-                                    value: widget.controlState.telemetryData.sensorStatus,
-                                  ),
-                                  _MetricRow(
-                                    label: 'Left / Right PWM',
-                                    value:
-                                        '${widget.controlState.telemetryData.leftMotor} / ${widget.controlState.telemetryData.rightMotor}',
+                                  Expanded(
+                                    child: GridView.count(
+                                      crossAxisCount: 2,
+                                      mainAxisSpacing: 8,
+                                      crossAxisSpacing: 8,
+                                      childAspectRatio: 2.6,
+                                      children: [
+                                        _MetricTile(
+                                          label: 'Mission State',
+                                          value: widget.controlState.missionRunning
+                                              ? 'RUNNING'
+                                              : 'IDLE',
+                                        ),
+                                        _MetricTile(
+                                          label: 'Robot Speed',
+                                          value:
+                                              '${widget.controlState.telemetryData.speed.toStringAsFixed(0)}%',
+                                        ),
+                                        _MetricTile(
+                                          label: 'Distance',
+                                          value: widget.controlState
+                                                      .distanceToObjectCm ==
+                                                  null
+                                              ? '--'
+                                              : '${widget.controlState.distanceToObjectCm!.toStringAsFixed(0)} cm',
+                                        ),
+                                        _MetricTile(
+                                          label: 'Battery',
+                                          value:
+                                              '${widget.controlState.telemetryData.batteryVoltage.toStringAsFixed(2)} V',
+                                        ),
+                                        _MetricTile(
+                                          label: 'RSSI',
+                                          value:
+                                              '${widget.controlState.telemetryData.signalStrength.toStringAsFixed(0)} dBm',
+                                        ),
+                                        _MetricTile(
+                                          label: 'Health',
+                                          value: widget.controlState.telemetryData
+                                              .sensorStatus,
+                                        ),
+                                        _MetricTile(
+                                          label: 'Left PWM',
+                                          value:
+                                              '${widget.controlState.telemetryData.leftMotor}',
+                                        ),
+                                        _MetricTile(
+                                          label: 'Right PWM',
+                                          value:
+                                              '${widget.controlState.telemetryData.rightMotor}',
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),
@@ -226,25 +242,32 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
-class _MetricRow extends StatelessWidget {
-  const _MetricRow({required this.label, required this.value});
+class _MetricTile extends StatelessWidget {
+  const _MetricTile({required this.label, required this.value});
 
   final String label;
   final String value;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.14)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 18)),
+          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+          const SizedBox(height: 2),
           Text(
             value,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 22,
+              fontSize: 14,
               fontWeight: FontWeight.w700,
             ),
           ),

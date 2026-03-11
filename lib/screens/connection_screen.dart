@@ -29,69 +29,72 @@ class ConnectionScreen extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.all(18),
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text(
                       'Robot Remote Controller by May',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 28,
+                        fontSize: 34,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.5,
                       ),
                     ),
-                    const Spacer(),
-                    SizedBox(
-                      width: 290,
-                      height: 70,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          gradient: LinearGradient(
-                            colors: connected
-                                ? const [Color(0xFFFF6B6B), Color(0xFFFF3D3D)]
-                                : const [Color(0xFF29B6F6), Color(0xFF0277BD)],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: (connected
-                                      ? const Color(0xFFFF5252)
-                                      : const Color(0xFF00B0FF))
-                                  .withOpacity(0.4),
-                              blurRadius: 18,
-                              offset: const Offset(0, 8),
+                    const SizedBox(height: 28),
+                    Center(
+                      child: SizedBox(
+                        width: 290,
+                        height: 70,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            gradient: LinearGradient(
+                              colors: connected
+                                  ? const [Color(0xFFFF6B6B), Color(0xFFFF3D3D)]
+                                  : const [Color(0xFF29B6F6), Color(0xFF0277BD)],
                             ),
-                          ],
-                        ),
-                        child: ElevatedButton.icon(
-                          onPressed: connecting
-                              ? null
-                              : connected
-                                  ? controlState.disconnectFromDevice
-                                  : controlState.connectToDevice,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            foregroundColor: Colors.white,
-                            shadowColor: Colors.transparent,
-                            textStyle: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.8,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: (connected
+                                        ? const Color(0xFFFF5252)
+                                        : const Color(0xFF00B0FF))
+                                    .withOpacity(0.4),
+                                blurRadius: 18,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
                           ),
-                          icon: Icon(
-                            connected ? Icons.bluetooth_disabled : Icons.bluetooth,
-                            size: 24,
-                          ),
-                          label: Text(
-                            connecting
-                                ? 'CONNECTING...'
+                          child: ElevatedButton.icon(
+                            onPressed: connecting
+                                ? null
                                 : connected
-                                    ? 'DISCONNECT'
-                                    : 'CONNECT TO ROBOT',
+                                    ? controlState.disconnectFromDevice
+                                    : controlState.connectToDevice,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                              shadowColor: Colors.transparent,
+                              textStyle: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.8,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            ),
+                            icon: Icon(
+                              connected ? Icons.bluetooth_disabled : Icons.bluetooth,
+                              size: 24,
+                            ),
+                            label: Text(
+                              connecting
+                                  ? 'CONNECTING...'
+                                  : connected
+                                      ? 'DISCONNECT'
+                                      : 'CONNECT TO ROBOT',
+                            ),
                           ),
                         ),
                       ),
@@ -117,7 +120,6 @@ class ConnectionScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                    const Spacer(),
                   ],
                 ),
               ),

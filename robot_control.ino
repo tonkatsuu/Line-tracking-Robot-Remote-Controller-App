@@ -131,8 +131,9 @@ void handleJoystick(int8_t x, int8_t y) {
  }
  
  void setMotor(int left, int right) {
-   left  = constrain(left, -255, 255);
-   right = constrain(right, -255, 255);
+  // Match firmware output limits with app presets (100/130/170).
+  left  = constrain(left, -MAX_SPEED, MAX_SPEED);
+  right = constrain(right, -MAX_SPEED, MAX_SPEED);
  
    // LEFT MOTOR (invert to fix reversed direction)
    left = -left;

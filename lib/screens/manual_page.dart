@@ -85,99 +85,115 @@ class _ManualPageState extends State<ManualPage> {
                       child: Row(
                         children: [
                           Expanded(
-                            flex: 6,
+                            flex: 7,
                             child: _GlassPanel(
-                              child: SizedBox.expand(
-                                child: Joystick(
-                                  onJoystickChanged:
-                                      widget.controlState.updateJoystick,
-                                  knobColor: const Color(0xFF00B0FF),
-                                ),
+                              child: Joystick(
+                                onJoystickChanged:
+                                    widget.controlState.updateJoystick,
+                                knobColor: const Color(0xFF00B0FF),
                               ),
                             ),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
                             flex: 5,
-                            child: _GlassPanel(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Telemetry',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.95),
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w700,
+                            child: Column(
+                              children: [
+                                Expanded(
+                                  child: _GlassPanel(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Telemetry',
+                                          style: TextStyle(
+                                            color: Colors.white.withOpacity(0.95),
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Expanded(
+                                          child: GridView.count(
+                                            crossAxisCount: 2,
+                                            mainAxisSpacing: 8,
+                                            crossAxisSpacing: 8,
+                                            childAspectRatio: 2.6,
+                                            children: [
+                                              _MetricTile(
+                                                label: 'Battery',
+                                                value:
+                                                    '${telemetry.batteryVoltage.toStringAsFixed(2)} V',
+                                              ),
+                                              _MetricTile(
+                                                label: 'RSSI',
+                                                value:
+                                                    '${telemetry.signalStrength.toStringAsFixed(0)} dBm',
+                                              ),
+                                              _MetricTile(
+                                                label: 'Health',
+                                                value: telemetry.sensorStatus,
+                                              ),
+                                              _MetricTile(
+                                                label: 'Speed',
+                                                value:
+                                                    '${telemetry.speed.toStringAsFixed(0)}%',
+                                              ),
+                                              _MetricTile(
+                                                label: 'Left PWM',
+                                                value: '${telemetry.leftMotor}',
+                                              ),
+                                              _MetricTile(
+                                                label: 'Right PWM',
+                                                value: '${telemetry.rightMotor}',
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  const SizedBox(height: 10),
-                                  _MetricTile(
-                                    label: 'Battery',
-                                    value:
-                                        '${telemetry.batteryVoltage.toStringAsFixed(2)} V',
+                                ),
+                                const SizedBox(height: 12),
+                                _GlassPanel(
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: _SpeedPresetButton(
+                                          label: 'SLOW',
+                                          pwm: 100,
+                                          selected:
+                                              widget.controlState.speedLimitPwm == 100,
+                                          onTap: () => widget.controlState
+                                              .setSpeedPreset(100),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: _SpeedPresetButton(
+                                          label: 'MEDIUM',
+                                          pwm: 130,
+                                          selected:
+                                              widget.controlState.speedLimitPwm == 130,
+                                          onTap: () => widget.controlState
+                                              .setSpeedPreset(130),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: _SpeedPresetButton(
+                                          label: 'FAST',
+                                          pwm: 170,
+                                          selected:
+                                              widget.controlState.speedLimitPwm == 170,
+                                          onTap: () => widget.controlState
+                                              .setSpeedPreset(170),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  _MetricTile(
-                                    label: 'RSSI',
-                                    value:
-                                        '${telemetry.signalStrength.toStringAsFixed(0)} dBm',
-                                  ),
-                                  _MetricTile(
-                                    label: 'Sensor Health',
-                                    value: telemetry.sensorStatus,
-                                  ),
-                                  _MetricTile(
-                                    label: 'Robot Speed',
-                                    value: '${telemetry.speed.toStringAsFixed(0)}%',
-                                  ),
-                                  _MetricTile(
-                                    label: 'Left PWM',
-                                    value: '${telemetry.leftMotor}',
-                                  ),
-                                  _MetricTile(
-                                    label: 'Right PWM',
-                                    value: '${telemetry.rightMotor}',
-                                  ),
-                                  const Spacer(),
-                                  Text(
-                                    'Connection: ${telemetry.isConnected ? 'Connected' : 'Disconnected'}',
-                                    style: const TextStyle(color: Colors.white70),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _GlassPanel(
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _SpeedPresetButton(
-                              label: 'SLOW',
-                              pwm: 100,
-                              selected: widget.controlState.speedLimitPwm == 100,
-                              onTap: () => widget.controlState.setSpeedPreset(100),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: _SpeedPresetButton(
-                              label: 'MEDIUM',
-                              pwm: 130,
-                              selected: widget.controlState.speedLimitPwm == 130,
-                              onTap: () => widget.controlState.setSpeedPreset(130),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: _SpeedPresetButton(
-                              label: 'FAST',
-                              pwm: 170,
-                              selected: widget.controlState.speedLimitPwm == 170,
-                              onTap: () => widget.controlState.setSpeedPreset(170),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -228,22 +244,27 @@ class _MetricTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white.withOpacity(0.15)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Colors.white70)),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white70, fontSize: 11),
+          ),
+          const SizedBox(height: 2),
           Text(
             value,
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w700,
+              fontSize: 14,
             ),
           ),
         ],
